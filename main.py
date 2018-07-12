@@ -2,7 +2,7 @@
 #
 # Simple manager prototype for xqemu
 #
-from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMainWindow, QMessageBox, QWidget
 from PyQt5.uic import loadUiType
 from PyQt5 import QtCore, QtGui
 from qmp import QEMUMonitorProtocol
@@ -247,6 +247,9 @@ class MainWindow(QMainWindow, mainwindow_class):
 		self.inst.stop()
 		sys.exit(0)
 
+from Xlib import X
+from Xlib.display import Display
+
 def main():
 	app = QApplication(sys.argv)
 	app.setStyle('Fusion')
@@ -268,6 +271,32 @@ def main():
 	app.setPalette(palette)
 
 	widget = MainWindow()
+
+	def findXQEMUWindowX11(window, indent):
+			children = window.query_tree().children
+			for w in children:
+				#owner = window.get_full_property(display.get_atom('_NET_WM_PID'), X.AnyPropertyType)
+				name = w.get_wm_class()
+				print(indent, "%s: 0x%X" % (name, w.id))
+				if name != None and name[0] == "qemu-system-i386":					
+					print("Found!")
+					return w
+				search = findXQEMUWindowX11(w, indent+'-')
+				if search != None:
+					return search
+			return None
+
+	display = Display()
+	root = display.screen().root
+	x11w = findXQEMUWindowX11(root, '-')
+	qw = QtGui.QWindow.fromWinId(x11w.id)
+	print(qw)
+	#qw.setParent(widget.centralwidget)
+	print(widget.centralWidget())
+	x = QWidget.createWindowContainer(qw, widget.centralWidget())
+	#x.setSizePolicy()
+	x.resize(640, 480)
+
 	widget.show()
 	sys.exit(app.exec_())
 
